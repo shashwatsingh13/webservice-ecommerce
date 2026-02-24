@@ -1,0 +1,78 @@
+package com.ecommerce.order_service.service;
+
+
+import com.ecommerce.order_service.dto.OrderDTO;
+import com.ecommerce.order_service.dto.ResponseDTO;
+import com.ecommerce.order_service.entity.OrdersEntity;
+import com.ecommerce.order_service.repository.OrdersRepository;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.BeanUtils;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+@AllArgsConstructor
+@Slf4j
+@Repository
+public class OrderService {
+
+    private OrdersRepository ordersRepository;
+    private ModelMapper modelMapper;
+
+    public ResponseDTO getAllOrders(){
+        log.info("Start: OrderService getAllOrders()");
+        ResponseDTO response = new ResponseDTO();
+        try{
+            List<OrdersEntity> orders = ordersRepository.findAll();
+            if(orders.isEmpty()){
+                response.setMessage("No record found");
+                response.setStatus("Error");
+                return response;
+            }
+            List<OrderDTO> ordersDto = orders.stream().map(item -> modelMapper.map(item, OrderDTO.class))
+                    .toList();
+             response.setData(ordersDto);
+             response.setStatus("Success");
+             response.setMessage("Records fetch successfully");
+             log.info("End : orderService getAllOrders()");
+             return response;
+        } catch (Exception e) {
+            response.setMessage("System error occurred");
+            response.setStatus("Error");
+            log.error("Error: OrderService getAllOrders()", e.getMessage());
+            return response;
+        }
+    }
+
+
+    public ResponseDTO getOrderById(Long id) {
+        log.info("Start: OrderService getOrderById(Long id)");
+        ResponseDTO response = new ResponseDTO();
+        try {
+            Optional<OrdersEntity> orderEntity = ordersRepository.findById(id);
+            if(orderEntity.isEmpty()){
+                response.setMessage("No record found");
+                response.setStatus("Error");
+                return response;
+            }
+            OrderDTO orderDto = new OrderDTO();
+            BeanUtils.copyProperties(orderEntity,orderDto);
+            response.setStatus("Success");
+            response.setData(orderDto);
+            response.setMessage("Records fetch successfully");
+            return response;
+        } catch (Exception e) {
+            response.setMessage("System error occurred");
+            response.setStatus("Error");
+            log.error("Error: OrderService getOrderById()", e.getLocalizedMessage());
+            return response;
+        }
+    }
+}
