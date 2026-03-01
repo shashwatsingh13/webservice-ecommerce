@@ -1,7 +1,9 @@
 package com.ecommerce.order_service.service;
 
 
+import com.ecommerce.order_service.clients.InventoryOpenFeignClient;
 import com.ecommerce.order_service.dto.OrderDTO;
+import com.ecommerce.order_service.dto.OrderRequestDTO;
 import com.ecommerce.order_service.dto.ResponseDTO;
 import com.ecommerce.order_service.entity.OrdersEntity;
 import com.ecommerce.order_service.repository.OrdersRepository;
@@ -25,6 +27,7 @@ public class OrderService {
 
     private OrdersRepository ordersRepository;
     private ModelMapper modelMapper;
+    private InventoryOpenFeignClient inventoryOpenFeignClient;
 
     public ResponseDTO getAllOrders(){
         log.info("Start: OrderService getAllOrders()");
@@ -72,6 +75,24 @@ public class OrderService {
             response.setMessage("System error occurred");
             response.setStatus("Error");
             log.error("Error: OrderService getOrderById()", e.getLocalizedMessage());
+            return response;
+        }
+    }
+
+
+    public ResponseDTO createOrder(OrderRequestDTO orderRequestDTO){
+        log.info("Start: OrderService - createOrder()");
+        ResponseDTO response = new ResponseDTO();
+        try{
+            Double totalPrice = inventoryOpenFeignClient.reduceStocks(orderRequestDTO);
+            response.setData(totalPrice);
+            response.setStatus("Success");
+            response.setMessage("Operation completed successfully");
+            return response;
+        } catch (Exception e) {
+            log.error("System error occurred", e.getLocalizedMessage());
+            response.setMessage("System error occurred");
+            response.setStatus("error");
             return response;
         }
     }

@@ -1,6 +1,8 @@
 package com.ecommerce.order_service.controller;
 
+import com.ecommerce.order_service.clients.InventoryOpenFeignClient;
 import com.ecommerce.order_service.dto.OrderDTO;
+import com.ecommerce.order_service.dto.OrderRequestDTO;
 import com.ecommerce.order_service.dto.ResponseDTO;
 import com.ecommerce.order_service.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ public class OrderController {
 
 
     private final OrderService orderService;
+    private final InventoryOpenFeignClient inventoryOpenFeignClient;
 
     @GetMapping("/helloOrder")
     public String helloOrder(){
@@ -39,7 +42,8 @@ public class OrderController {
     }
 
     @PostMapping("/create-order")
-    public ResponseEntity<Object> createorder(@RequestBody OrderDTO orderRequestDto){
-
+    public ResponseEntity<Object> createOrder(@RequestBody OrderRequestDTO orderRequestDto){
+        log.info("Start: OrderController - createOrder()");
+        return ResponseEntity.ok(orderService.createOrder(orderRequestDto));
     }
 }
