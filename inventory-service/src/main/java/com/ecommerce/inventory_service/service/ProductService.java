@@ -70,7 +70,7 @@ public class ProductService {
         Double totalPrice = 0.0;
         try{
             for(OrderRequestItemDTO orderRequestItemDTO: orderRequestDTO.getItems()){
-                Long productId = orderRequestItemDTO.getProductid();
+                Long productId = orderRequestItemDTO.getProductId();
                 Integer quantity = orderRequestItemDTO.getQuantity();
 
                 ProductEntity product =  productRepository.getReferenceById(productId);

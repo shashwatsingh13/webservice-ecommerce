@@ -5,13 +5,19 @@ import com.ecommerce.order_service.clients.InventoryOpenFeignClient;
 import com.ecommerce.order_service.dto.OrderDTO;
 import com.ecommerce.order_service.dto.OrderRequestDTO;
 import com.ecommerce.order_service.dto.ResponseDTO;
+import com.ecommerce.order_service.entity.OrderItem;
+import com.ecommerce.order_service.entity.OrderStatus;
 import com.ecommerce.order_service.entity.OrdersEntity;
 import com.ecommerce.order_service.repository.OrdersRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
@@ -79,21 +85,37 @@ public class OrderService {
         }
     }
 
-
+//    @Retry(name = "inventoryRetry", fallbackMethod = "createOrderFallback")
+//    @RateLimiter(name= "inventoryRateLimiter", fallbackMethod = "createOrderFallback")
+    @CircuitBreaker(name = "inventoryCircuitBreaker", fallbackMethod = "createOrderFallback")
     public ResponseDTO createOrder(OrderRequestDTO orderRequestDTO){
         log.info("Start: OrderService - createOrder()");
         ResponseDTO response = new ResponseDTO();
-        try{
-            Double totalPrice = inventoryOpenFeignClient.reduceStocks(orderRequestDTO);
-            response.setData(totalPrice);
+
+            response = inventoryOpenFeignClient.reduceStocks(orderRequestDTO);
+            OrdersEntity orders = modelMapper.map(orderRequestDTO, OrdersEntity.class);
+            for(OrderItem orderItem : orders.getItems()){
+                orderItem.setOrder(orders);
+            }
+            orders.setTotalPrice(Double.valueOf((response.getData()).toString()));
+            orders.setOrderStatus(OrderStatus.CONFIRMED);
+            ordersRepository.save(orders);
+
+            response.setData(null);
             response.setStatus("Success");
             response.setMessage("Operation completed successfully");
             return response;
-        } catch (Exception e) {
-            log.error("System error occurred", e.getLocalizedMessage());
-            response.setMessage("System error occurred");
-            response.setStatus("error");
-            return response;
-        }
+
+    }
+
+    /**
+     * Calls when parent api failed
+     **/
+    ResponseDTO createOrderFallback (OrderRequestDTO orderRequestDTO, Throwable throwable){
+        log.error("Fallback occurred due to: {}", throwable.getMessage());
+        ResponseDTO response = new ResponseDTO();
+        response.setMessage("System error occurred");
+        response.setStatus("error");
+        return response;
     }
 }
